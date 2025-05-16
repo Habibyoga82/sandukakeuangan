@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, FileText, Download, Info } from "lucide-react";
+import { Search, FileText, Download, Info, Printer } from "lucide-react";
 
 interface FinancialData {
   id: string;
@@ -36,9 +36,10 @@ interface FinancialData {
 }
 
 const MembershipTable = () => {
-  const [selectedBranch, setSelectedBranch] = useState("all");
+  const [selectedBranch, setSelectedBranch] = useState("cabang");
   const [selectedMonth, setSelectedMonth] = useState("mei");
   const [selectedYear, setSelectedYear] = useState("2023");
+  const printRef = useRef<HTMLDivElement>(null);
 
   // Mock data for demonstration
   const mockData: FinancialData[] = [
@@ -105,7 +106,7 @@ const MembershipTable = () => {
 
   // Filter data based on selected branch
   const filteredData =
-    selectedBranch === "all"
+    selectedBranch === "cabang"
       ? mockData
       : mockData.filter((item) => item.branch === selectedBranch);
 
@@ -140,9 +141,58 @@ const MembershipTable = () => {
     }).format(amount);
   };
 
+  const handlePrint = () => {
+    if (printRef.current) {
+      const printContents = printRef.current.innerHTML;
+      const originalContents = document.body.innerHTML;
+
+      const printStyles = `
+        <style>
+          @media print {
+            body { font-family: Arial, sans-serif; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .print-header { text-align: center; margin-bottom: 20px; }
+            .print-header h2 { margin-bottom: 5px; }
+            .print-header p { margin: 5px 0; }
+            .summary-section { margin-bottom: 20px; }
+            .summary-item { margin-bottom: 10px; }
+          }
+        </style>
+      `;
+
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Cetak Ringkasan Keuangan</title>
+              ${printStyles}
+            </head>
+            <body>
+              <div class="print-header">
+                <h2>Ringkasan Keuangan</h2>
+                <p>Periode: ${months.find((m) => m.value === selectedMonth)?.label} ${selectedYear}</p>
+                <p>Cabang: ${selectedBranch === "cabang" ? "Semua Cabang" : selectedBranch}</p>
+              </div>
+              <div class="print-content">
+                ${printContents}
+              </div>
+              <script>
+                window.onload = function() { window.print(); window.close(); }
+              </script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
+    }
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
-      <div className="flex flex-col space-y-6">
+      <div className="flex flex-col space-y-6" ref={printRef}>
         <h2 className="text-xl font-medium">Ringkasan Keuangan</h2>
 
         {/* Summary Cards */}
@@ -238,7 +288,7 @@ const MembershipTable = () => {
                   <SelectValue placeholder="Semua Cabang" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Semua Cabang</SelectItem>
+                  <SelectItem value="cabang">Semua Cabang</SelectItem>
                   {branches.map((branch) => (
                     <SelectItem key={branch} value={branch}>
                       {branch}
@@ -301,7 +351,7 @@ const MembershipTable = () => {
                 <TableHead>Potongan Bank</TableHead>
                 <TableHead>Setoran Total</TableHead>
                 <TableHead>Selisih</TableHead>
-                <TableHead className="w-20 text-center">Action</TableHead>
+                <TableHead className="w-20 text-center">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -351,8 +401,9 @@ const MembershipTable = () => {
             variant="outline"
             size="sm"
             className="flex items-center gap-2"
+            onClick={handlePrint}
           >
-            <FileText className="h-4 w-4" />
+            <Printer className="h-4 w-4" />
             Cetak Ringkasan
           </Button>
         </div>
